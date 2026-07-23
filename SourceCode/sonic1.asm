@@ -24469,6 +24469,8 @@ loc_130BA:
 		bclr	#0,$22(a0)
 		move.w	#$A4,d0
                 jsr	(PlaySound_Special).l ;	play stopping sound
+		move.b	#6,($FFFFD1E4).w    ; set the spin dash dust routine to skid dust
+        	move.b	#$15,($FFFFD1DA).w
                
 		
 
@@ -24523,6 +24525,8 @@ loc_13120:
 		bset	#0,$22(a0)
 		move.w	#$A4,d0
                 jsr	(PlaySound_Special).l ;	play stopping sound
+		move.b	#6,($FFFFD1E4).w    ; set the spin dash dust routine to skid dust
+		move.b	#$15,($FFFFD1DA).w
                 	
 
 locret_1314E:
