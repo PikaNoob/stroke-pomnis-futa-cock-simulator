@@ -1,0 +1,2 @@
+cd SMPSPlay
+start SMPSPlay
