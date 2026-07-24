@@ -210,9 +210,17 @@ GameClrRAM:
 		move.l	d7,(a6)+
 		dbf	d6,GameClrRAM	; fill RAM ($0000-$FDFF) with $0
 		bsr.w	VDPSetupGame
-		bsr.w	SoundDriverLoad
 		bsr.w	JoypadInit
 		move.b	#0,($FFFFF600).w ; set Game Mode to Sega Screen
+
+		jsr     MegaPCM_LoadDriver
+                lea     SampleTable, a0
+                jsr     MegaPCM_LoadSampleTable
+                tst.w   d0                      ; was sample table loaded successfully?
+                beq.s   @SampleTableOk          ; if yes, branch
+			illegal
+@SampleTableOk:
+
 
 MainGameLoop:
 		move.b	($FFFFF600).w,d0 ; load	Game Mode
@@ -457,11 +465,6 @@ loc_B9A:
 
 loc_BBA:
 		move.w	#1,($FFFFF644).w	; enable HBlank
-		move.w	#$100,($A11100).l
-
-loc_BC8:
-		btst	#0,($A11100).l
-		bne.s	loc_BC8
 		tst.b	($FFFFF64E).w		; is water above top of screen?
 		bne.s	loc_BFE			; if yes, branch
 		lea	($C00004).l,a5
@@ -485,7 +488,6 @@ loc_BFE:				; XREF: loc_BC8
 
 loc_C22:				; XREF: loc_BC8
 		move.w	($FFFFF624).w,(a5)
-		move.w	#0,($A11100).l
 		bra.w	loc_B5E
 ; ===========================================================================
 
@@ -529,11 +531,6 @@ VBlank_Sub10:				; XREF: VBlank_Routines
 
 ;loc_C5E:
 VBlank_Sub08:				; XREF: VBlank_Routines
-		move.w	#$100,($A11100).l ; stop the Z80
-
-loc_C76:
-		btst	#0,($A11100).l	; has Z80 stopped?
-		bne.s	loc_C76		; if not, branch
 		bsr.w	ReadJoypads
 		tst.b	($FFFFF64E).w
 		bne.s	loc_CB0
@@ -577,7 +574,6 @@ loc_CD4:				; XREF: loc_C76
 loc_D50:
               ;  move	#$83,($FFFFF640).w
 		;jsr	Process_DMA
-                move.w	#0,($A11100).l
 		movem.l	($FFFFF700).w,d0-d7
 		movem.l	d0-d7,($FFFFFF10).w
 		movem.l	($FFFFF754).w,d0-d1
@@ -612,11 +608,6 @@ Demo_TimeEnd:
 
 ;loc_DA6:
 VBlank_Sub0A:				; XREF: VBlank_Routines
-		move.w	#$100,($A11100).l ; stop the Z80
-
-loc_DAE:
-		btst	#0,($A11100).l	; has Z80 stopped?
-		bne.s	loc_DAE		; if not, branch
 		bsr.w	ReadJoypads
 		lea	($C00004).l,a5
 		move.l	#$94009340,(a5)
@@ -639,7 +630,6 @@ loc_DAE:
 		move.w	#$7C00,(a5)
 		move.w	#$83,($FFFFF640).w
 		move.w	($FFFFF640).w,(a5)
-		move.w	#0,($A11100).l
 		bsr.w	PalCycle_SS
 		jsr	ProcessDMAQueue
 
@@ -654,11 +644,6 @@ locret_E70:
 
 ;loc_E72:
 VBlank_Sub0C:				; XREF: VBlank_Routines
-		move.w	#$100,($A11100).l ; stop the Z80
-
-loc_E7A:
-		btst	#0,($A11100).l	; has Z80 stopped?
-		bne.s	loc_E7A		; if not, branch
 		bsr.w	ReadJoypads
 		tst.b	($FFFFF64E).w
 		bne.s	loc_EB4
@@ -702,7 +687,6 @@ loc_EEE:
 		jsr	ProcessDMAQueue
 
 loc_F54:
-		move.w	#0,($A11100).l	; start	the Z80
 		movem.l	($FFFFF700).w,d0-d7
 		movem.l	d0-d7,($FFFFFF10).w
 		movem.l	($FFFFF754).w,d0-d1
@@ -731,11 +715,6 @@ VBlank_Sub12:				; XREF: VBlank_Routines
 
 ;loc_F9A:
 VBlank_Sub16:				; XREF: VBlank_Routines
-		move.w	#$100,($A11100).l ; stop the Z80
-
-loc_FAE:
-		btst	#0,($A11100).l	; has Z80 stopped?
-		bne.s	loc_FAE		; if not, branch
 		bsr.w	ReadJoypads
 		lea	($C00004).l,a5
 		move.l	#$94009340,(a5)
@@ -758,7 +737,6 @@ loc_FAE:
 		move.w	#$7C00,(a5)
 		move.w	#$83,($FFFFF640).w
 		move.w	($FFFFF640).w,(a5)
-		move.w	#0,($A11100).l	; start	the Z80
 		jsr	ProcessDMAQueue
 
 loc_1060:
@@ -773,11 +751,6 @@ locret_106C:
 
 
 sub_106E:				; XREF: VBlank_Sub02; et al
-		move.w	#$100,($A11100).l ; stop the Z80
-
-loc_1076:
-		btst	#0,($A11100).l	; has Z80 stopped?
-		bne.s	loc_1076	; if not, branch
 		bsr.w	ReadJoypads
 		tst.b	($FFFFF64E).w
 		bne.s	loc_10B0
@@ -815,7 +788,6 @@ loc_10D4:				; XREF: sub_106E
 		move.w	#$7C00,(a5)
 		move.w	#$83,($FFFFF640).w
 		move.w	($FFFFF640).w,(a5)
-		move.w	#0,($A11100).l	; start	the Z80
 		rts
 ; End of function sub_106E
 
@@ -892,16 +864,10 @@ loc_119E:				; XREF: PalToCRAM
 
 
 JoypadInit:				; XREF: GameClrRAM
-		move.w	#$100,($A11100).l ; stop the Z80
-
-Joypad_WaitZ80:
-		btst	#0,($A11100).l	; has the Z80 stopped?
-		bne.s	Joypad_WaitZ80	; if not, branch
 		moveq	#$40,d0
 		move.b	d0,($A10009).l	; init port 1 (joypad 1)
 		move.b	d0,($A1000B).l	; init port 2 (joypad 2)
 		move.b	d0,($A1000D).l	; init port 3 (extra)
-		move.w	#0,($A11100).l	; start	the Z80
 		rts	
 ; End of function JoypadInit
 
@@ -1045,30 +1011,6 @@ loc_134A:
 		dbf	d1,loc_134A
 		rts	
 ; End of function ClearScreen
-
-; ---------------------------------------------------------------------------
-; Subroutine to	load the sound driver
-; ---------------------------------------------------------------------------
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-SoundDriverLoad:			; XREF: GameClrRAM; TitleScreen
-		nop	
-		move.w	#$100,($A11100).l	; stop the Z80
-		move.w	#$100,($A11200).l	; reset the Z80
-		lea	(Kos_Z80).l,a0		; load sound driver
-		lea	($A00000).l,a1
-		bsr.w	KosDec			; decompress sound driver
-		move.w	#0,($A11200).l
-		nop
-		nop
-		nop
-		nop
-		move.w	#$100,($A11200).l	; reset the Z80
-		move.w	#0,($A11100).l		; start	the Z80
-		rts	
-; End of function SoundDriverLoad
 
 ; ---------------------------------------------------------------------------
 ; Subroutine to	play a sound or	music track
@@ -3130,7 +3072,7 @@ Sega_WaitPallet:
 		bsr.w	PlaySound_Special ; play "SEGA"	sound
 		move.b	#$14,($FFFFF62A).w
 		bsr.w	DelayProgram
-		move.w	#$1E,($FFFFF614).w
+		move.w  #$1E+7*60,($FFFFF614).w         ; was $1E
 
 Sega_WaitEnd:
 		move.b	#2,($FFFFF62A).w
@@ -3155,7 +3097,6 @@ TitleScreen:				; XREF: GameModeArray
 		bsr.w	ClearPLC
 		bsr.w	Pal_FadeFrom	; fade from black
 		move	#$2700,sr
-		bsr.w	SoundDriverLoad
 		lea	($C00004).l,a6
 		
 		; setup VPD registers
@@ -39282,6 +39223,9 @@ ObjPos_Null:	dc.b $FF, $FF, 0, 0, 0,	0
 		incbin	misc\padding4.bin
 		even
 
+		include "MegaPCM.asm"                   ; ++ ADD THIS LINE
+                include "SampleTable.asm"               ; ++ ADD THIS LINE
+
 Go_SoundTypes:	dc.l SoundTypes		; XREF: Sound_Play
 Go_SoundD0:	dc.l SoundD0Index	; XREF: Sound_D0toDF
 Go_MusicIndex:	dc.l MusicIndex		; XREF: Sound_81to9F
@@ -39504,20 +39448,18 @@ loc_71C88:
 		move.b	$10(a5),d0
 		cmpi.b	#$80,d0
 		beq.s	locret_71CAA
-		btst	#3,d0
-		bne.s	loc_71CAC
-		move.b	d0,($A01FFF).l
+		;btst	#3,d0
+		;bne.s	loc_71CAC
+		;move.b	d0,($A01FFF).l
+		MPCM_stopZ80                            ; ++ --- MEGAPCM2 GUIDE ADDITION
+                move.b  d0, $A00000+Z_MPCM_CommandInput ; ++ send DAC sample to Mega PCM
+                MPCM_startZ80                           ; ++
+
 
 locret_71CAA:
 		rts	
 ; ===========================================================================
-
-loc_71CAC:
-		subi.b	#$88,d0
-		move.b	byte_71CC4(pc,d0.w),d0
-		move.b	d0,($A000EA).l
-		move.b	#$83,($A01FFF).l
-		rts	
+	
 ; End of function sub_71C4E
 
 ; ===========================================================================
@@ -39916,26 +39858,8 @@ Sound_ExIndex:
 ; ---------------------------------------------------------------------------
 
 Sound_E1:
-		lea	(SegaPCM).l,a2		; load PCM sample
-		move.l	#$6978,d3		; load sample size
-		move.b	#$2A,($A04000).l
-
-PlayPCM_Loop:
-		move.b	(a2)+,($A04001).l	; write the PCM data
-		move.w	#$14,d0			; load pitch
-		dbf	d0,*			; delay program for d0 times
-		sub.l	#1,d3			; subtract 1 from the PCM sample size
-		beq.s	return_PlayPCM		; if sample is over, branch
-		lea	(Joypad),a0
-		lea	($A10003).l,a1
-		jsr	(Joypad_Read).w
-		btst	#iStart,(Joypad|Held)	; is Start button pressed?
-		bne.s	return_PlayPCM		; if yes, branch
-		bra.s	PlayPCM_Loop
-
-return_PlayPCM:
-		addq.w	#4,sp
-		rts
+		moveq   #$FFFFFF8C, d0          ; ++ request SEGA PCM sample
+                jmp     MegaPCM_PlaySample      ; ++
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Play music track $81-$9F
@@ -40811,72 +40735,61 @@ locret_72714:
 
 ; ===========================================================================
 
-loc_72716:				; XREF: sub_72A5A
-		btst	#2,(a5)
-		bne.s	locret_72720
-		bra.w	sub_72722
+loc_72716:
+                btst    #2,(a5)                         ; Is track being overriden by sfx?
+                bne.s   @locret                         ; Return if yes
+                bra.w   sub_72722
 ; ===========================================================================
+; locret_72720:
+@locret:
+                rts	
 
-locret_72720:
-		rts	
+sub_72722:
+                move.b  1(a5), d2
+                subq.b  #4, d2                          ; Is this bound for part I or II?
+                bcc.s   loc_7275A                       ; If part II, branch
+                addq.b  #4, d2                          ; Add in voice control bits
+                add.b   d2, d0                          ;
 
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-sub_72722:				; XREF: sub_71E18; sub_72C4E; sub_72CB4
-		btst	#2,1(a5)
-		bne.s	loc_7275A
-		add.b	1(a5),d0
-; End of function sub_72722
-
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-sub_7272E:				; XREF: loc_71E6A
-		move.b	($A04000).l,d2
-		btst	#7,d2
-		bne.s	sub_7272E
-		move.b	d0,($A04000).l
-		nop	
-		nop	
-		nop	
-
-loc_72746:
-		move.b	($A04000).l,d2
-		btst	#7,d2
-		bne.s	loc_72746
-
-		move.b	d1,($A04001).l
-		rts	
+; ---------------------------------------------------------------------------
+sub_7272E:
+                MPCM_stopZ80
+                MPCM_ensureYMWriteReady
+@waitLoop:      tst.b   ($A04000).l             ; is FM busy?
+                bmi.s   @waitLoop               ; branch if yes
+                move.b  d0, ($A04000).l
+                nop
+                move.b  d1, ($A04001).l
+                nop
+                nop
+@waitLoop2:     tst.b   ($A04000).l             ; is FM busy?
+                bmi.s   @waitLoop2              ; branch if yes
+                move.b  #$2A, ($A04000).l       ; restore DAC output for Mega PCM
+                MPCM_startZ80
+                rts
 ; End of function sub_7272E
 
-; ===========================================================================
-
-loc_7275A:				; XREF: sub_72722
-		move.b	1(a5),d2
-		bclr	#2,d2
-		add.b	d2,d0
-
 ; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
 
 
-sub_72764:				; XREF: loc_71E6A; Sound_ChkValue; sub_7256A; sub_72764
-		move.b	($A04000).l,d2
-		btst	#7,d2
-		bne.s	sub_72764
-		move.b	d0,($A04002).l
-		nop	
-		nop	
-		nop	
-
-loc_7277C:
-		move.b	($A04000).l,d2
-		btst	#7,d2
-		bne.s	loc_7277C
-
-		move.b	d1,($A04003).l
-		rts	
+loc_7275A:
+                add.b   d2,d0                   ; Add in to destination register
+; ---------------------------------------------------------------------------
+sub_72764:
+                MPCM_stopZ80
+                MPCM_ensureYMWriteReady
+@waitLoop:      tst.b   ($A04000).l             ; is FM busy?
+                bmi.s   @waitLoop               ; branch if yes
+                move.b  d0, ($A04002).l
+                nop
+                move.b  d1, ($A04003).l
+                nop
+                nop
+@waitLoop2:     tst.b   ($A04000).l             ; is FM busy?
+                bmi.s   @waitLoop2              ; branch if yes
+                move.b  #$2A, ($A04000).l       ; restore DAC output for Mega PCM
+                MPCM_startZ80
+                rts
 ; End of function sub_72764
 
 ; ===========================================================================
@@ -41830,8 +41743,6 @@ SoundD2:	incbin	sound\PeeloutCharge.bin
 SoundD3:	incbin	sound\PeeloutStop.bin
 		even
 SoundD4:	incbin	sound\Peelout_Release.bin
-		even
-SegaPCM:	incbin	sound\segapcm.bin
 		even
 Art_Dust	incbin	artunc\spindust.bin
 
