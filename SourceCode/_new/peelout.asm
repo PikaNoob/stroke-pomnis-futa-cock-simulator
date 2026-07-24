@@ -15,6 +15,7 @@
 		move.b	#1,$1C(a0)
 		move.w	#0,$3A(a0)
 		move.w	#$D2,d0
+		move.b	#2,($FFFFD1DC).w	; Set the Spin Dash dust animation to $2.
 		jsr		(PlaySound_Special).l 	; Play peelout charge sound
 	;	sfx 	sfx_PeeloutCharge 		; These are if you use AMPS
 		addq.l	#4,sp
@@ -35,7 +36,7 @@ SCDPeelout_Launch:
 		bne.w	SCDPeelout_Charge
 		bclr	#1,$39(a0)	; stop Dashing
 		cmpi.b	#$1E,$3A(a0)	; have we been charging long enough?
-		bne.s	SCDPeelout_Stop_Sound
+		bne	SCDPeelout_Stop_Sound
 		move.b	#0,$1C(a0)	; launches here (peelout sprites)
 		move.w	#1,$10(a0)	; force X speed to nonzero for camera lag's benefit
 		move.w	$14(a0),d0
@@ -51,6 +52,7 @@ SCDPeelout_Launch:
  
 @dontflip:
 		bclr	#7,$22(a0)
+		move.b	#0,($FFFFD1DC).w	; clear Spin Dash dust animation.
 		move.w	#$D4,d0
 		jsr		(PlaySound_Special).l
 	;	sfx 	sfx_PeeloutRelease
